@@ -28,17 +28,15 @@ import com.egg.biblioteca.repositorios.UsuarioRepositorio;
 import jakarta.servlet.http.HttpSession;
 
 @Service
-public class UsuarioServicio implements UserDetailsService {
+public class UsuarioServicio implements UserDetailsService{
 
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
-
     @Autowired
     private ImagenServicio imagenServicio;
-
+    
     @Transactional
-    public void registrar(String nombre, String email, String password, String password2, MultipartFile archivo)
-            throws MiException {
+    public void registrar(MultipartFile archivo, String nombre, String email, String password, String password2) throws MiException {
 
         validar(nombre, email, password, password2);
 
@@ -47,33 +45,22 @@ public class UsuarioServicio implements UserDetailsService {
         usuario.setEmail(email);
         usuario.setPassword(new BCryptPasswordEncoder().encode(password));
         usuario.setRol(Rol.USER);
-        Imagen profile = imagenServicio.guardar(archivo);
 
-        usuario.setImagen(profile);
+        if (archivo != null && !archivo.isEmpty()) {
+            Imagen imagen = imagenServicio.guardar(archivo);
+            usuario.setImagen(imagen);
+        }
 
         usuarioRepositorio.save(usuario);
     }
 
-    @Transactional(readOnly = true)
-    public List<Usuario> listarUsuarios() {
-        List<Usuario> usuarios = new ArrayList<>();
-        usuarios = usuarioRepositorio.findAll();
-        return usuarios;
-    }
-
-    // Gets and returns an "usuario" given its id
-    @Transactional(readOnly = true)
-    public Usuario getOne(UUID id) {
-        return usuarioRepositorio.getReferenceById(id);
-    }
-
     @Transactional
-    public void modificarUsuario(String nombre, String email, String password, String password2, MultipartFile archivo)
-            throws MiException {
+    public void actualizar(MultipartFile archivo, UUID idUsuario, String nombre, String email, String password, String password2) throws MiException {
 
         validar(nombre, email, password, password2);
 
-        Optional<Usuario> respuesta = Optional.ofNullable(usuarioRepositorio.buscarPorEmail(email));
+        Optional<Usuario> respuesta = usuarioRepositorio.findById(idUsuario);
+        
 
         if (respuesta.isEmpty()) {
             throw new MiException("El usuario especificado no existe.");
@@ -83,14 +70,43 @@ public class UsuarioServicio implements UserDetailsService {
         usuario.setNombre(nombre);
         usuario.setEmail(email);
         usuario.setPassword(new BCryptPasswordEncoder().encode(password));
-        Imagen profile = imagenServicio.guardar(archivo);
 
-        usuario.setImagen(profile);
+        if (archivo != null && !archivo.isEmpty()) {
+            String idImagen = usuario.getImagen() != null ? usuario.getImagen().getId().toString() : null;
+            Imagen imagen = imagenServicio.actualizar(archivo, idImagen != null ? UUID.fromString(idImagen) : null);
+            usuario.setImagen(imagen);
+        }
 
         usuarioRepositorio.save(usuario);
     }
+    @Transactional(readOnly = true)
+    public List<Usuario> listarUsuarios() {
+        List<Usuario> usuarios = new ArrayList<>();
+        usuarios = usuarioRepositorio.findAll();
+        return usuarios;
+    }
+
+    @Transactional
+    public void cambiarRol(UUID id){
+        Optional<Usuario> respuesta = usuarioRepositorio.findById(id);
+
+        if(respuesta.isPresent()){
+            Usuario usuario = respuesta.get();
+            if(usuario.getRol().equals(Rol.USER)){
+                usuario.setRol(Rol.ADMIN);
+            }else if (usuario.getRol().equals(Rol.ADMIN)){
+                usuario.setRol(Rol.USER);
+            }
+            
+        }
+    }
+    @Transactional(readOnly = true)
+    public Usuario getOne(UUID id){
+        return usuarioRepositorio.findById(id).orElse(null);
+    }
 
     private void validar(String nombre, String email, String password, String password2) throws MiException {
+
 
         if (nombre.isEmpty() || nombre == null) {
             throw new MiException("el nombre no puede ser nulo o estar vacío");
@@ -104,7 +120,7 @@ public class UsuarioServicio implements UserDetailsService {
         if (!password.equals(password2)) {
             throw new MiException("Las contraseñas ingresadas deben ser iguales");
         }
-
+    
     }
 
     @Override
@@ -113,16 +129,25 @@ public class UsuarioServicio implements UserDetailsService {
         Usuario usuario = usuarioRepositorio.buscarPorEmail(email);
 
         if (usuario != null) {
+
             List<GrantedAuthority> permisos = new ArrayList<>();
-            GrantedAuthority p = new SimpleGrantedAuthority("ROLE_" + usuario.getRol().toString());
+            
+            GrantedAuthority p = new SimpleGrantedAuthority("ROLE_"+ usuario.getRol().toString());
+
             permisos.add(p);
+
             ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
             HttpSession session = attr.getRequest().getSession(true);
+
             session.setAttribute("usuariosession", usuario);
+
             return new User(usuario.getEmail(), usuario.getPassword(), permisos);
-        } else {
+        }else{
             return null;
         }
-
     }
+
+    
+
+
 }

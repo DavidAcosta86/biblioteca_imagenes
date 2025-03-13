@@ -1,9 +1,7 @@
 package com.egg.biblioteca.entidades;
 
 import java.util.UUID;
-
 import jakarta.persistence.Basic;
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -13,17 +11,43 @@ import jakarta.persistence.Lob;
 
 @Entity
 public class Imagen {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Lob
-    @Basic(fetch = FetchType.LAZY) // Carga diferida para optimizar el rendimiento
-    @Column(columnDefinition = "LONGBLOB") // Tipo LONGBLOB en la base de datos
+    
+    private String mime;
+    
+    private String nombre;
+    
+    @Lob @Basic(fetch = FetchType.LAZY)
     private byte[] contenido;
 
     public Imagen() {
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getMime() {
+        return mime;
+    }
+
+    public void setMime(String mime) {
+        this.mime = mime;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
 
     public byte[] getContenido() {
@@ -33,5 +57,7 @@ public class Imagen {
     public void setContenido(byte[] contenido) {
         this.contenido = contenido;
     }
-
+    
+    
 }
+

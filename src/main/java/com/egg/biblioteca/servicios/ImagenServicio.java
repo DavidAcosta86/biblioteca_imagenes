@@ -1,65 +1,76 @@
 package com.egg.biblioteca.servicios;
 
-import java.io.IOException;
+import com.egg.biblioteca.entidades.Imagen;
+import com.egg.biblioteca.excepciones.MiException;
+import com.egg.biblioteca.repositorios.ImagenRepositorio;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.egg.biblioteca.entidades.Imagen;
-import com.egg.biblioteca.excepciones.MiException;
-import com.egg.biblioteca.repositorios.ImagenRepositorio;
 
 @Service
 public class ImagenServicio {
-
-    // Inyección del repositorio
     @Autowired
     private ImagenRepositorio imagenRepositorio;
-
-    // Método para guardar una nueva imagen
-    public Imagen guardar(MultipartFile archivo) throws MiException {
-        if (archivo != null && !archivo.isEmpty()) {
-            // Crear un objeto Imagen
-            Imagen imagen = new Imagen();
+    
+    public Imagen guardar(MultipartFile archivo) throws MiException{
+        if (archivo != null) {
             try {
+                
+                Imagen imagen = new Imagen();
+                
+                imagen.setMime(archivo.getContentType());
+                
+                imagen.setNombre(archivo.getName());
+                
                 imagen.setContenido(archivo.getBytes());
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } // Convertir archivo a byte[]
-
-            // Guardar en la base de datos
-            return imagenRepositorio.save(imagen);
-        } else {
-            // Manejar el caso en que el archivo es nulo o vacío
-            throw new IllegalArgumentException("El archivo no puede ser nulo o vacío.");
-        }
-    }
-
-    // Método para actualizar una imagen existente
-    public Imagen actualizar(UUID id, MultipartFile archivo) throws MiException {
-        Optional<Imagen> imagenOpt = imagenRepositorio.findById(id);
-
-        if (imagenOpt.isPresent()) {
-            Imagen imagen = imagenOpt.get();
-
-            // Verificar si el archivo no es nulo y no está vacío
-            if (archivo != null && !archivo.isEmpty()) {
-                try {
-                    imagen.setContenido(archivo.getBytes()); // Actualizar el contenido con el nuevo archivo
-                } catch (IOException e) {
-                    throw new MiException("Error al procesar el archivo");
-                }
+                
+                return imagenRepositorio.save(imagen);
+                
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
             }
-
-            // Guardar la imagen actualizada en la base de datos
-            return imagenRepositorio.save(imagen);
-        } else {
-            // Manejar el caso en que no se encuentra la imagen
-            throw new IllegalArgumentException("No se encontró una imagen con el id proporcionado.");
         }
+        return null;
     }
+    
+    public Imagen actualizar(MultipartFile archivo, UUID idImagen) throws MiException{
+        if (archivo != null) {
+            try {
+                
+                Imagen imagen = new Imagen();
+                
+                if (idImagen != null) {
+                    Optional<Imagen> respuesta = imagenRepositorio.findById(idImagen);
+                    
+                    if (respuesta.isPresent()) {
+                        imagen = respuesta.get();
+                    }
+                }
+                
+                imagen.setMime(archivo.getContentType());
+                
+                imagen.setNombre(archivo.getName());
+                
+                imagen.setContenido(archivo.getBytes());
+                
+                return imagenRepositorio.save(imagen);
+                
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+        return null;
+        
+    }
+    
+    @Transactional(readOnly = true)
+	public List<Imagen> listarTodos() {
+		return imagenRepositorio.findAll();
+	}
+    
 }
